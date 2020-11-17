@@ -576,6 +576,40 @@ func (m *Master) CleanupOldFiles() error {
 	return nil
 }
 
+func (m *Master) CleanupOldLocalFiles() error {
+	files, e := filepath.Glob(m.Dir + "/*")
+	if e != nil {
+		m.ErrorHandler.Error(e)
+		return e
+	}
+
+	for _, file := range files {
+		found := false
+		if m.Categories != nil && file == m.Categories.FileName {
+			found = true
+		}
+		for _, bucket := range m.Buckets {
+			if file == m.Dir+"/"+bucket.ZippedFileName || file == m.Dir+"/"+bucket.FileName {
+				found = true
+			}
+		}
+		if file == m.Dir+"/"+m.FileName {
+			found = true
+		}
+		if !found {
+			m.Logger.DebugF("debug", "File found in work dir not in master: %s", file)
+
+			e = os.Remove(file)
+			if e != nil {
+				m.ErrorHandler.Error(e)
+				continue
+			}
+		}
+	}
+
+	return nil
+}
+
 func (m *Master) Close() {
 	if m.File != nil {
 		m.File.Close()
